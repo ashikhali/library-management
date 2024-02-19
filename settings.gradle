@@ -1,0 +1,6 @@
+rootProject.name = 'library-management'
+include 'core'
+include 'library1'
+include 'library2'
+include 'library-common'
+

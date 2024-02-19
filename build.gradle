@@ -1,0 +1,104 @@
+import com.bmuschko.gradle.docker.tasks.image.Dockerfile
+import com.bmuschko.gradle.docker.tasks.image.DockerBuildImage
+import com.bmuschko.gradle.docker.tasks.image.DockerPushImage
+
+plugins {
+    id 'java'
+    id 'org.springframework.boot' version "$springBootVersion" apply false
+    id 'io.spring.dependency-management' version "$springDependencyManagerVersion" apply false
+    id 'com.bmuschko.docker-remote-api' version "$dockerVersion" apply false
+}
+
+jar {
+    enabled true
+}
+
+java {
+    sourceCompatibility = '17'
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+
+allprojects {
+
+    group = 'az.ingress'
+
+    def hash = 'git rev-parse --short HEAD'.execute().text.trim() //tag
+    version = "$projectVersion.$hash"
+
+    repositories {
+        mavenCentral()
+    }
+
+    apply plugin: 'java'
+    apply plugin: 'org.springframework.boot'
+    apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'com.bmuschko.docker-remote-api'
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    compileOnly 'org.projectlombok:lombok'
+    runtimeOnly 'com.mysql:mysql-connector-j'
+    annotationProcessor 'org.projectlombok:lombok'
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+}
+
+def javaProjects = [
+        project(':library1'),
+        project(':library2')
+]
+
+configure(javaProjects) {
+    task dockerFile(type: Dockerfile, dependsOn: assemble) {
+        destFile.set(project.file('Dockerfile'))
+        from "alpine:$alpineVersion"
+        runCommand 'apk add --no-cache openjdk17'
+        runCommand 'apk add --no-cache tzdata'
+        copyFile "build/libs/${project.name}-${project.version}.jar", '/app/'
+        workingDir '/app/'
+        entryPoint 'java'
+        defaultCommand '-jar', "/app/${project.name}-${project.version}.jar"
+    }
+
+    task dockerBuild(type: DockerBuildImage, dependsOn: dockerFile) {
+        inputDir.set(file("$projectDir/."))
+        doLast {
+            println("creatig image: $dockerRepoUrl/ing-site-${project.name}:$version")
+        }
+        images.add("$dockerRepoUrl/${project.name}:$version")
+    }
+
+    task dockerPush(type: DockerPushImage, dependsOn: dockerBuild) {
+        images.add("$dockerRepoUrl/${project.name}:$version")
+
+        registryCredentials.setUsername("$dockerHubUsername")
+        registryCredentials.setPassword("$dockerHubPassword")
+        registryCredentials.setEmail("$dockerHubEmail")
+    }
+
+    task replaceImagesTagOnDockerCompose(dependsOn: dockerPush) {
+        def dockerComposeFile = file(rootDir.toString().concat("/docker-compose.yaml"))
+        def dockerComposeContent = dockerComposeFile.text
+        def newDockerComposeContent = dockerComposeContent.replaceAll(
+                /${dockerRepoUrl}\/${project.name}.*/,
+                "${dockerRepoUrl}/${project.name}:${project.version}"
+        )
+        dockerComposeFile.write(newDockerComposeContent)
+    }
+
+}
+
+tasks.named('test') {
+    useJUnitPlatform()
+}

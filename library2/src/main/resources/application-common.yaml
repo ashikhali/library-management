@@ -1,0 +1,4 @@
+server:
+  port: 9095
+  servlet:
+    context-path: /library2

@@ -21,11 +21,11 @@ services:
   #    networks:
   #      - ms23
   ms-library1:
-    image: aminus7/library1:1.0.
+    image: aminus7/library1:1.0.070f85f
     hostname: ms-library1
     restart: always
     ports:
-      - 9091:9094
+      - 9091:9090
     environment:
       - DB_CONNECTION_IP=ms23
       - DB_CONNECTION_USER=root
@@ -34,11 +34,11 @@ services:
     depends_on:
       - ms23
   ms-library2:
-    image: aminus7/library2:1.0.
+    image: aminus7/library2:1.0.070f85f
     hostname: ms-library2
     restart: always
     ports:
-      - 9092:9095
+      - 9092:9090
     environment:
       - DB_CONNECTION_IP=ms23
       - DB_CONNECTION_USER=root

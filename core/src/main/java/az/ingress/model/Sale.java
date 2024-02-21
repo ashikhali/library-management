@@ -18,8 +18,8 @@ public class Sale {
 
     private String book;
     private String author;
-//
-//    @CreationTimestamp
-//    private LocalDateTime saleDate;
+
+    @CreationTimestamp
+    private LocalDateTime saleDate;
 
 }

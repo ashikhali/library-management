@@ -21,8 +21,15 @@ public class LibraryController {
     }
 
     @GetMapping("/books")
-    public List<Book> getAllBooks() {
-        return libraryService.getAllBooks();
+    public ResponseEntity<List<Book>> getAllBooks() {
+        List<Book> book = libraryService.getAllBooks();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.add("Library Header", "Hello from Library 1");
+
+        return ResponseEntity.status(HttpStatus.OK)
+                .headers(headers)
+                .body(book);
     }
 
     @PostMapping("/books")
